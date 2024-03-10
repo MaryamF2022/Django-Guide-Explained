@@ -1,0 +1,28 @@
+{% extends 'base2.html' %} <!-- Assuming you have a base.html file with Bootstrap included -->
+
+{% block content %}
+<h1>Author Month Archive</h1>
+
+<div class="row">
+    {% for author in object_list %}
+    <div class="col-md-4">
+        <div class="card mb-4">
+            <div class="card-body">
+                <h5 class="card-title">{{ author.name }}</h5>
+                <p class="card-text">Age: {{ author.age }}</p>
+                <p class="card-text">Birth Date: {{ author.birth_date }}</p>
+                <p class="card-text">Date Joined: {{ author.date_joined }}</p>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% endblock %}
+
+
+
+
+
+
+
+

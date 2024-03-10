@@ -1,0 +1,167 @@
+## Model Intance Refrence
+
+# Validating Objects
+
+'''''There are three steps involved in validating a model:
+
+    ** Validating a model fields: Model.clean_fields()
+    ** Validate a model as a whole: Model.clean()
+    ** Validate the field uniqueness: Model.validate_unique() 
+
+''''Al three steps are performed when you cal model's full_clean() method. When you use a ModelForm, 
+the call to is_valid() will perform these validation steps for all the fields that are included on 
+the form. You should only need to call a model’s full_clean() method if you plan to handle validation 
+errors yourself, or if you have excluded fields from the ModelForm that require validation.
+
+
+** Model.full_clean(exclude=None, validate_uniquea=True)
+
+    ''''This method calls Model.clean_fields(), Model.clean(), and Model.validate_unique() (if validate_unique is True), 
+    in that order and raises a ValidationError that has a ~message_dict~ attribute containing errors from all three stages.
+
+    ~~message_dict~~ 
+        ** The message_dict attribute is a property of the 'ValidationError' class in Django. It provides a dictionary-like 
+        interface to access the validation error messages associated fields.
+        ** When a ValidationError is raised, it can contain multiple validation errors, each associated with a specific field 
+        or with the model as a whole. The message_dict attribute provides a structured representation of these errors, where 
+        the keys are field names or special keys like NON_FIELD_ERRORS, and the values are lists of error messages for each field.
+
+        ********
+
+                from django.core.exceptions import ValidationError                          
+
+                try:
+                    # Perform some validation
+                    raise ValidationError({
+                        'field1': ['Error message 1', 'Error message 2'],
+                        'field2': ['Error message 3'],
+                        NON_FIELD_ERRORS: ['Non-field error message'],
+                    })
+                except ValidationError as e:
+                    message_dict = e.message_dict
+                    print(message_dict)
+
+        ********
+
+                {
+                    'field1': ['Error message 1', 'Error message 2'],
+                    'field2': ['Error message 3'],
+                    NON_FIELD_ERRORS: ['Non-field error message'],
+                }
+
+        ********
+
+
+        ** The optional exclude argument can be used to provide a list of field names that can be excluded from validation and cleaning. 
+        ModelForm uses this argument to exclude fields that aren’t present on your form from being validated since any errors raised 
+        could not be corrected by the user.
+
+        //NOTE: Note that full_clean() will not be called automatically when you call your model’s save() method. You’ll need to call it 
+        manually when you want to run one-step model validation for your own manually created models.
+
+
+    1** Model.clean_fields(exclude=None)
+
+        ''''The clean_fields() method is a part of Django's model validation process. It is called during model validation to clean and '
+        validate the model's fields before saving the instance to the database. 
+
+        ********
+
+                from django.core.exceptions import ValidationError
+                from django.db import models
+
+                class ExampleModel(models.Model):
+                    name = models.CharField(max_length=100)
+                    age = models.PositiveIntegerField()
+
+                    def clean_fields(self):
+                        if self.age < 18:
+                            raise ValidationError("Age must be 18 or above.")
+
+                        super().clean_fields()
+
+        ********
+
+        ''''The purpose of the clean_fields() method is to provide a hook for model-level field validation. It allows you to add custom 
+        validation logic to ensure that the fields of the model meet specific criteria or constraints before saving the instance.During 
+        the model validation process, clean_fields() is automatically called by Django whenever you call methods like full_clean() or 
+        when the model is saved. If any field fails validation, a ValidationError is raised, preventing the instance from being saved.
+
+    
+    2** Model.clena()
+
+        ''''This method should be used to provide custom model validation, and to modify attributes on your model if desired. For instance, 
+        you could use it to automatically provide a value for a field, or to do validation that requires access to more than a single field:
+
+        ********
+
+                import datetime
+                from django.core.exceptions import ValidationError
+                from django.db import models
+                from django.utils.translation import gettext_lazy as _
+
+                class Article(models.Model):
+                    ...
+                    def clean(self):
+                        # Don't allow draft entries to have a pub_date.
+                        if self.status == 'draft' and self.pub_date is not None:
+                            raise ValidationError(_('Draft entries may not have a publication date.'))
+                        # Set the pub_date for published items if it hasn't been set already.
+                        if self.status == 'published' and self.pub_date is None:
+                            self.pub_date = datetime.date.today()
+
+        ********
+
+        //NOTE*Note, however, that like Model.full_clean(), a model’s clean() method is not invoked when you 
+        call your model’s save() method.
+
+        **In the above example, the ValidationError exception raised by Model.clean() was instantiated with a 
+        string, so it will be stored in a special error dictionary key, NON_FIELD_ERRORS. This key is used for
+        errors that are tied to the entire model instead of to a specific field:
+
+        ********
+
+                from django.core.exceptions import NON_FIELD_ERRORS, ValidationError
+                try:
+                    article.full_clean()
+                except ValidationError as e:
+                    non_field_errors = e.message_dict[NON_FIELD_ERRORS]
+
+        ********
+
+        **To assign exceptions to a specific field, instantiate the ValidationError with a dictionary, where 
+        the keys are the field names. We could update the previous example to assign the error to the pub_date 
+        field:
+
+        ********
+                
+                class Article(models.Model):
+                ...
+                def clean(self):
+                    # Don't allow draft entries to have a pub_date.
+                    if self.status == 'draft' and self.pub_date is not None:
+                        raise ValidationError({'pub_date': _('Draft entries may not have a publication date.')})
+                    ...
+        
+        ********
+
+        **If you detect errors in multiple fields during Model.clean(), you can also pass a dictionary mapping 
+        field names to errors:
+
+        ********
+
+                raise ValidationError({
+                    'title': ValidationError(_('Missing title.'), code='required'),
+                    'pub_date': ValidationError(_('Invalid date.'), code='invalid'),
+                })
+
+        ********
+
+
+    3** validate_unique(exclude=None)
+
+        **This method is similar to clean_fields(), but validates all uniqueness constraints on your model 
+        instead of individual field values. The optional exclude argument allows you to provide a list of 
+        field names to exclude from validation. It will raise a ValidationError if any fields fail validation.
+        Note that if you provide an exclude argument to validate_unique(), any unique_together constraint 
+        involving one of the fields you provided will not be checked.

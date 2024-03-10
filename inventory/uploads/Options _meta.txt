@@ -1,0 +1,88 @@
+### _meta (Option class)
+
+# _meta 
+    	
+        ''''In Django, the _meta attribute is an instance of the Options class that holds metadata about a 
+        model. It provides access to various information and settings related to the model.
+
+        ** Methods that it provides can be used to:
+            * Retrieve all field instances of a model
+            * Retrieve a single field instance of a model by name
+
+        ** Here are some important attributes and methods of _meta:
+
+            * model_name: The name of the model as a string.
+            * app_label: The label of the Django app that the model belongs to.
+            * verbose_name: The human-readable name of the model.
+            * verbose_name_plural: The plural form of the model's verbose name.
+            * db_table: The name of the database table associated with the model.
+            * get_field(field_name): Returns the Field instance for the specified field name.
+            * get_fields(include_parent=True, include_hidden=False): Returns a list of all Field instances 
+            defined in the model, including fields from related models.
+            * get_all_field_names(): Returns a list of all field names defined in the model, including 
+            fields from related models.
+            * concrete_fields(): Returns a list of concrete Field instances defined in the model 
+            (excluding fields from parent abstract models).
+            * get_all_related_objects(): Returns a list of all related objects for the model.
+            * get_all_related_names(): Returns a list of all related names for the model.
+            * get_related_field(field_name): Returns the related Field instance for the specified field name.
+            * get_field_by_name(field_name): Returns a tuple containing the Field instance and the model class 
+            for the specified field name.
+
+            ********
+                    
+                    >>> from django.contrib.auth.models import User
+
+                    # A field on the model
+                    >>> User._meta.get_field("username")
+                    <django.db.models.fields.CharField: username>
+
+                    # A field from another model that has a relation with the current model
+                    >>> User._meta.get_field("logentry")
+                    <ManyToOneRel: admin.logentry>
+
+                    # A non existent field
+                    >>> User._meta.get_field("does_not_exist")
+                    Traceback (most recent call last):
+                        ...
+                    FieldDoesNotExist: User has no field named 'does_not_exist'
+
+            ********
+
+                    >> from django.contrib.auth.models import User
+                    >>> User._meta.get_fields()
+                    (<ManyToOneRel: admin.logentry>,
+                    <django.db.models.fields.AutoField: id>,
+                    <django.db.models.fields.CharField: password>,
+                    <django.db.models.fields.DateTimeField: last_login>,
+                    <django.db.models.fields.BooleanField: is_superuser>,
+                    <django.db.models.fields.CharField: username>,
+                    <django.db.models.fields.CharField: first_name>,
+                    <django.db.models.fields.CharField: last_name>,
+                    <django.db.models.fields.EmailField: email>,
+                    <django.db.models.fields.BooleanField: is_staff>,
+                    <django.db.models.fields.BooleanField: is_active>,
+                    <django.db.models.fields.DateTimeField: date_joined>,
+                    <django.db.models.fields.related.ManyToManyField: groups>,
+                    <django.db.models.fields.related.ManyToManyField: user_permissions>)
+
+                    # Also include hidden fields.
+                    >>> User._meta.get_fields(include_hidden=True)
+                    (<ManyToOneRel: auth.user_groups>,
+                    <ManyToOneRel: auth.user_user_permissions>,
+                    <ManyToOneRel: admin.logentry>,
+                    <django.db.models.fields.AutoField: id>,
+                    <django.db.models.fields.CharField: password>,
+                    <django.db.models.fields.DateTimeField: last_login>,
+                    <django.db.models.fields.BooleanField: is_superuser>,
+                    <django.db.models.fields.CharField: username>,
+                    <django.db.models.fields.CharField: first_name>,
+                    <django.db.models.fields.CharField: last_name>,
+                    <django.db.models.fields.EmailField: email>,
+                    <django.db.models.fields.BooleanField: is_staff>,
+                    <django.db.models.fields.BooleanField: is_active>,
+                    <django.db.models.fields.DateTimeField: date_joined>,
+                    <django.db.models.fields.related.ManyToManyField: groups>,
+                    <django.db.models.fields.related.ManyToManyField: user_permissions>)
+            
+            ********

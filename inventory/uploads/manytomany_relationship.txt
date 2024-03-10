@@ -1,0 +1,241 @@
+###Many To Many Relationships
+
+
+# Arguments
+
+** ManyToManyField.related_name
+** ManyToManyField.related_query_name
+
+    ''''In Django's many-to-many relationships, both related_name and related_query_name are used 
+    to define the reverse relation from the related model back to the model that defines the 
+    relationship. They serve slightly different purposes:
+
+    ** related_name: The related_name attribute is used to specify the name of the reverse relation 
+    from the related model back to the model that defines the relationship. It allows you to access 
+    related objects using this attribute on the related model.
+
+    ********
+            
+            class Person(models.Model):
+                name = models.CharField(max_length=100)
+
+            class Group(models.Model):
+                name = models.CharField(max_length=100)
+                members = models.ManyToManyField(Person, related_name='groups')
+
+            ********
+
+                    person = Person.objects.get(id=1)
+                    person.groups.all()
+
+            ********
+    
+    *********
+
+    ** related_query_name: The related_query_name attribute is used to specify the name of the 
+    reverse relation for query purposes. It is used when you want to perform queries or filters 
+    on the related objects.
+
+    *********
+
+            class Person(models.Model):
+                name = models.CharField(max_length=100)
+
+            class Group(models.Model):
+                name = models.CharField(max_length=100)
+                members = models.ManyToManyField(Person, related_name='groups', 
+                related_query_name='group')
+
+            ********
+                    
+                    Person.objects.filter(groups__name='Some Group')  
+                    # Returns persons belonging to a specific group
+
+            ********
+
+    ********
+
+** ManyToManyField.limit_choices_to
+
+        staff_member = models.ManyToManyField(
+            Person,
+            limit_choices_to={'singer': True},
+        )
+    causes the corresponding field on the ModelForm to list only Persons that have singer=True. This 
+    may be helpful in the Django admin.
+
+    *****
+
+    The callable form can be helpful, for instance, when used in conjunction with the Python 
+    datetime module to limit selections by date range. For example:
+
+        def limit_pub_date_choices():
+            return {'pub_date__lte': datetime.date.today()}
+
+        limit_choices_to = limit_pub_date_choices
+
+    If limit_choices_to is or returns a Q object, which is useful for complex queries, then it 
+    will only have an effect on the choices available in the admin when the field is not listed 
+    in raw_id_fields in the ModelAdmin for the model.
+
+    __ limit_choices_to has no effect when used on a ManyToManyField with a custom intermediate 
+    table specified using the through parameter.
+
+**  ManyToManyField.symmetrical
+
+    *-->* Only used in the definition of -ManyToManyFields- on self. Consider the following model:
+
+        from django.db import models
+
+        class Person(models.Model):
+            friends = models.ManyToManyField("self")
+    
+    ** When Django processes this model, it identifies that it has a ManyToManyField on itself, and 
+    as a result, it doesn’t add a -person_set- attribute to the Person class. Instead, the 
+    ManyToManyField is assumed to be symmetrical – that is, if I am your friend, then you are my 
+    friend.
+
+    ** If you do not want symmetry in many-to-many relationships with self, set symmetrical to False. 
+    This will force Django to add the descriptor for the reverse relationship, allowing 
+    ManyToManyField relationships to be non-symmetrical.
+
+
+    In Django, a descriptor is a class attribute that manages the access and manipulation of a 
+    specific attribute of an object. It allows you to define custom behavior for accessing or 
+    setting a specific attribute value.
+
+    In the context of many-to-many relationships with self, when you set symmetrical to False, 
+    Django automatically adds a descriptor for the reverse relationship. This descriptor provides 
+    a way to access the related objects from the other side of the many-to-many relationship.
+
+    By default, when symmetrical is set to True, Django assumes that the relationship is symmetrical, 
+    meaning if Object A is related to Object B, then Object B is also related to Object A. In this 
+    case, both sides of the relationship can be accessed using the same attribute name.
+
+    However, when symmetrical is set to False, Django adds a descriptor to the model to represent 
+    the reverse relationship explicitly. This descriptor allows you to access the related objects 
+    from the other side of the relationship using a different attribute name. in this case you can 
+    access it via person_2.person_set.all
+
+    class Person(models.Model):
+        name = models.CharField(max_length=100)
+        friends = models.ManyToManyField('self', symmetrical=False, related_name='related_friends')
+
+In this case, by setting symmetrical to False, Django adds a descriptor for the reverse relationship 
+with the attribute name 'related_friends'. This allows you to access the related friends of a person 
+using the related_friends attribute.
+
+
+    person = Person.objects.get(id=1)
+    related_friends = person.related_friends.all()
+
+** ManyToManyField.through
+
+    ''''Django will automatically generate a table to manage many-to-many relationships. However, 
+    if you want to manually specify the intermediary table, you can use the through option to 
+    specify the Django model that represents the intermediate table that you want to use.
+
+        This class can be used to query associated records for a given model instance like a normal 
+        model:  ''Model.m2mfield.through.objects.all()''
+
+        ********
+
+                from django.db import models
+
+                class Person(models.Model):
+                    name = models.CharField(max_length=128)
+
+                    def __str__(self):
+                        return self.name
+
+                class Group(models.Model):
+                    name = models.CharField(max_length=128)
+                    members = models.ManyToManyField(Person, through='Membership')
+
+                    def __str__(self):
+                        return self.name
+
+                class Membership(models.Model):
+                    person = models.ForeignKey(Person, on_delete=models.CASCADE)
+                    group = models.ForeignKey(Group, on_delete=models.CASCADE)
+                    date_joined = models.DateField()
+                    invite_reason = models.CharField(max_length=64)
+            
+        *********
+
+        There are a few restrictions on the intermediate model:
+
+        ** Your intermediate model must contain one - and only one - foreign key to the source model 
+        (this would be Group in our example), or you must explicitly specify the foreign keys Django 
+        should use for the relationship using ManyToManyField.through_fields. If you have more than 
+        one foreign key and through_fields is not specified, a validation error will be raised. A 
+        similar restriction applies to the foreign key to the target model (this would be Person in 
+        our example).
+        ** For a model which has a many-to-many relationship to itself through an intermediary model, 
+        two foreign keys to the same model are permitted, but they will be treated as the two 
+        (different) sides of the many-to-many relationship. If there are more than two foreign keys 
+        though, you must also specify through_fields as above, or a validation error will be raised.
+
+        >>> ringo = Person.objects.create(name="Ringo Starr")
+        >>> paul = Person.objects.create(name="Paul McCartney")
+        >>> beatles = Group.objects.create(name="The Beatles")
+        >>> m1 = Membership(person=ringo, group=beatles,
+        ...     date_joined=date(1962, 8, 16),
+        ...     invite_reason="Needed a new drummer.")
+        >>> m1.save()
+        >>> beatles.members.all()
+        <QuerySet [<Person: Ringo Starr>]>
+        >>> ringo.group_set.all()
+        <QuerySet [<Group: The Beatles>]>
+        >>> m2 = Membership.objects.create(person=paul, group=beatles,
+        ...     date_joined=date(1960, 8, 1),
+        ...     invite_reason="Wanted to form a band.")
+        >>> beatles.members.all()
+        <QuerySet [<Person: Ringo Starr>, <Person: Paul McCartney>]>
+
+        You can also use add(), create(), or set() to create relationships, as long as you specify 
+        through_defaults for any required fields:
+
+        >>> beatles.members.add(john, through_defaults={'date_joined': date(1960, 8, 1)})
+        >>> beatles.members.create(name="George Harrison", through_defaults={'date_joined': date(1960, 8, 1)})
+        >>> beatles.members.set([john, paul, ringo, george], through_defaults={'date_joined': date(1960, 8, 1)})
+
+        If the custom through table defined by the intermediate model does not enforce uniqueness on 
+        the (model1, model2) pair, allowing multiple values, the remove() call will remove all 
+        intermediate model instances:
+
+        >>> Membership.objects.create(person=ringo, group=beatles,
+        ...     date_joined=date(1968, 9, 4),
+        ...     invite_reason="You've been gone for a month and we miss you.")
+        >>> beatles.members.all()
+        <QuerySet [<Person: Ringo Starr>, <Person: Paul McCartney>, <Person: Ringo Starr>]>
+        >>> # This deletes both of the intermediate model instances for Ringo Starr
+        >>> beatles.members.remove(ringo)
+        >>> beatles.members.all()
+        <QuerySet [<Person: Paul McCartney>]>
+        
+        The clear() method can be used to remove all many-to-many relationships for an instance:
+
+        >>> # Beatles have broken up
+        >>> beatles.members.clear()
+        >>> # Note that this deletes the intermediate model instances
+        >>> Membership.objects.all()
+        <QuerySet []>
+
+        *********
+        from django.db import models
+
+        class Person(models.Model):
+            name = models.CharField(max_length=100)
+            groups = models.ManyToManyField('Group', through='Membership', through_fields=('person', 'group_1'), related_name='memberships')
+
+        class Group(models.Model):
+            name = models.CharField(max_length=100)
+
+        class Membership(models.Model):
+            person = models.ForeignKey(Person, on_delete=models.CASCADE)
+            group_1 = models.ForeignKey(Group, on_delete=models.CASCADE, related_name='memberships_1')
+            group_2 = models.ForeignKey(Group, on_delete=models.CASCADE, related_name='memberships_2')
+
+            class Meta:
+                unique_together = ('group_1', 'group_2')

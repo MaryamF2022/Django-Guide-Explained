@@ -1,0 +1,153 @@
+### Constrains
+
+        ''''Constraints are defined in django.db.models.constraints, but for convenience they're imported 
+        into django.db.models. The standard convention is to use from django.db import models and refer to 
+        the constraints as models.<Foo>Constraint.
+
+
+# BaseConstraint        class BaseConstraint(name, violation_error_message=None)
+
+        Base class for all constraints. Subclasses must implement constraint_sql(), create_sql(), remove_sql() 
+        and validate() methods.
+
+        ********
+
+                from django.db import models
+                from django.db.models.constraints import BaseConstraint
+
+
+                # Custom constraint class
+                class PositiveSumConstraint(BaseConstraint):
+                        def __init__(self, fields, name=None):
+                                super().__init__(name)
+                                self.fields = fields
+
+                        def constraint_sql(self, model, schema_editor):
+                                # Generate the SQL statement for the constraint
+                                field_names = ', '.join(model._meta.get_field(field).column for field in self.fields)
+                                return f"CHECK ({field_names} >= 0)"
+
+                        def create_sql(self, model, schema_editor):
+                                # Generate the SQL statements for creating the constraint
+                                return [
+                                schema_editor._create_unique_sql(
+                                        model, [model._meta.get_field(field) for field in self.fields], self.name
+                                )
+                                ]
+
+                        def remove_sql(self, model, schema_editor):
+                                # Generate the SQL statements for removing the constraint
+                                return [
+                                schema_editor._delete_unique_sql(
+                                        model, [model._meta.get_field(field) for field in self.fields], self.name
+                                )
+                                ]
+
+
+                # Model using the custom constraint
+                class MyModel(models.Model):
+                        field1 = models.IntegerField()
+                        field2 = models.IntegerField()
+                        
+                        class Meta:
+                                constraints = [
+                                PositiveSumConstraint(fields=['field1', 'field2'], name='positive_sum_constraint')
+                                ]
+        ********
+
+All constraints have the following parameters in common:
+
+
+** BaseConstraint.name
+        
+        The name of the constraint. You must always specify a unique name for the constraint.
+
+
+** BaseConstraint.violation_error_message
+        
+        The error message used when ValidationError is raised during model validation. Defaults to "Constraint
+         “%(name)s” is violated.".
+
+
+** BaseConstraint.validate(model, instance, exclude=None, using=DEFAULT_DB_ALIAS)
+        
+        Validates that the constraint, defined on model, is respected on the instance. This will do a query 
+        on the database to ensure that the constraint is respected. If fields in the exclude list are needed 
+        to validate the constraint, the constraint is ignored.
+        Raise a ValidationError if the constraint is violated.
+        This method must be implemented by a subclass.
+
+        Purpose: The validate() method is used to validate that a constraint defined on a model is respected 
+        by a specific instance of that model. It performs a query on the database to ensure that the constraint 
+        is satisfied by the data in the instance.
+
+Method Signature:
+
+model: The model class on which the constraint is defined.
+instance: The specific instance of the model that needs to be validated against the constraint.
+exclude (optional): A list of fields to exclude from the validation process. If any of the excluded fields 
+are needed to validate the constraint, the constraint is ignored.
+using (optional): The name of the database connection to use for the validation. It defaults to 
+DEFAULT_DB_ALIAS, which represents the default database connection.
+
+
+## class CheckConstraint(*, check, name, violation_error_message=None)
+        Creates a check constraint in the database.
+
+
+        CheckConstraint.check
+        A Q object or boolean Expression that specifies the check you want the constraint to enforce.
+
+        For example, CheckConstraint(check=Q(age__gte=18), name='age_gte_18') ensures the age field is never less than 18.
+
+        Oracle
+
+        Checks with nullable fields on Oracle must include a condition allowing for NULL values in order for validate() to behave the same as check constraints validation. For example, if age is a nullable field:
+
+        CheckConstraint(check=Q(age__gte=18) | Q(age__isnull=True), name="age_gte_18")
+
+
+UniqueConstraint
+        class UniqueConstraint(*expressions, fields=(), name=None, condition=None, deferrable=None, include=None, opclasses=(), violation_error_message=None)¶
+        Creates a unique constraint in the database.
+
+
+UniqueConstraint.expressions
+Positional argument *expressions allows creating functional unique constraints on expressions and database functions.
+
+For example:
+
+UniqueConstraint(Lower("name").desc(), "category", name="unique_lower_name_category")
+creates a unique constraint on the lowercased value of the name field in descending order and the category field in the default ascending order.
+
+Functional unique constraints have the same database restrictions as Index.expressions.
+
+
+UniqueConstraint.fields
+A list of field names that specifies the unique set of columns you want the constraint to enforce.
+
+For example, UniqueConstraint(fields=['room', 'date'], name='unique_booking') ensures each room can only be booked once for each date.
+
+
+UniqueConstraint.condition
+A Q object that specifies the condition you want the constraint to enforce.
+
+For example:
+
+UniqueConstraint(fields=["user"], condition=Q(status="DRAFT"), name="unique_draft_user")
+ensures that each user only has one draft.
+
+These conditions have the same database restrictions as Index.condition.
+
+
+UniqueConstraint.deferrable
+Set this parameter to create a deferrable unique constraint. Accepted values are Deferrable.DEFERRED or Deferrable.IMMEDIATE. For example:
+
+from django.db.models import Deferrable, UniqueConstraint
+
+UniqueConstraint(
+    name="unique_order",
+    fields=["order"],
+    deferrable=Deferrable.DEFERRED,
+)
+By default constraints are not deferred. A deferred constraint will not be enforced until the end of the transaction. An immediate constraint will be enforced immediately after every command.

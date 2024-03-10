@@ -1,0 +1,18 @@
+1. Viewport
+    Viewport is the visual part of the screen that the user can actually see.
+    Ideally we want our page to adapt differebt sized screens. We want the headings. the images and the text to graw a little bit to fill the entire screen.
+    And to do that we have to add a code in our head part
+
+    <meta name="vieport" content="width=device-width, initial-scale=1.0">
+
+    but in addition to this line of code we can make actual changes we can make to our page to make it look a little better on different screens.
+2. Media Queries
+    One of those has to be done with media Queries.
+3. Flexbox
+    Flexbox is quite helpful if we have multiple elements that's we're all trying to display on the same page at the same time that 
+that might overflow if we not careful about we do a responsive design.
+4. Grids
+
+
+    there are css libraries does our websites responsive and one of those called bootstrap.
+

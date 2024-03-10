@@ -1,0 +1,18 @@
+### Model State
+
+# instance._state
+
+    ''''In Django _state attribute is a special attribute available on model instances that tracks the 
+    state and information about the instance's presistence and database operations.
+
+    ** The _state is an instance of the ModelState class and contains the following properties:
+
+    * _state.adding .. indicates wether the instance is in the process of beaing added.True or False
+    * _state.deleting .. Indicates wether the instance is schedualed for deletion True or not False
+    * _state.loading: Indicates whether the instance is being loaded from the database (True) or not (False).
+    * _state.db: Stores the name of the database where the instance is saved or will be saved.
+    * _state.fields_cache: Caches the loaded field values to optimize subsequent field access without 
+    hitting the database.
+    * _state.prepared: Indicates whether the instance's fields have been prepared for saving (True) or 
+    not (False).
+    * _state.saved: Indicates whether the instance has been saved to the database (True) or not (False).

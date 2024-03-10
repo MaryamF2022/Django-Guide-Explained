@@ -1,0 +1,496 @@
+### Model meta Options
+
+    ''''In Django metadata refers to additional information that can be added to a model class using classs 
+    Meta inner class.
+
+# Available Meta Options
+
+** Options.abstract 
+    
+    If abstract = True, this model will be an abstract base class.
+
+    In the context of Django models, an abstract base class is a model class that is not intended to be used 
+    directly to create database tables. Instead, it provides a common set of fields, methods, or other 
+    characteristics that can be shared among multiple model classes.
+
+    To define an abstract base class in Django, you can set the abstract attribute to True in the inner Meta 
+    class of the model. Here's an example:
+
+    ********
+
+            from django.db import models
+
+            class MyBaseModel(models.Model):
+                created_at = models.DateTimeField(auto_now_add=True)
+                updated_at = models.DateTimeField(auto_now=True)
+            
+                class Meta:
+                    abstract = True
+
+    ********
+
+            class MyModel(MyBaseModel):
+                name = models.CharField(max_length=100)
+                # other fields and methods specific to MyModel
+
+    ********
+
+
+** Options.app_label
+
+    If a model is defined outside of an application in INSTALLED_APPS, it must declare which app it belongs to:
+
+    app_label = "myapp"
+
+    ''''In Django, each model has a corresponding Model._meta attribute that provides metadata about the model. 
+    This metadata includes information such as the app label, model name, field details, and more.
+
+        ** app_label.object_name: If you want to represent a model in the format app_label.object_name, where 
+        app_label is the label of the app to which the model belongs and object_name is the name of the model, 
+        you can use model._meta.label.
+
+        For example, if you have a model called Post in the blog app, you can access its representation in the 
+        app_label.object_name format as follows:
+
+        ********
+    
+                from myapp.models import Post
+                
+                post_label = Post._meta.label
+                print(post_label)  # Output: "blog.Post"
+
+        ********
+
+        ** app_label.model_name: If you want to represent a model in the format app_label.model_name, where 
+        app_label is the label of the app and model_name is the lowercase version of the model name, you can 
+        use model._meta.label_lower.
+
+        For example, using the same Post model from the previous example, you can access its representation in 
+        the app_label.model_name format as follows:
+        
+        ********
+                
+                from myapp.models import Post
+                
+                post_label_lower = Post._meta.label_lower
+                print(post_label_lower)  # Output: "blog.post"
+
+        ********
+
+** Options.base_manager_name
+    
+    The attribute name of the manager, for example, 'objects', to use for the model's _base_manager.
+    The base manager is the parent manager from which other managers can inherit.
+    By default, the base manager has the same name as the default manager (objects in your case).
+
+** Options.db_table
+
+    The name of the database table to use for the model:
+
+        db_table = "music_album"
+
+** Options.db_table_comment
+
+    The comment on the database table to use for this model. It is useful for documenting database tables for 
+    individuals with direct database access who may not be looking at your Django code. For example:
+
+    ********
+
+            class Answer(models.Model):
+                question = models.ForeignKey(Question, on_delete=models.CASCADE)
+                answer = models.TextField()
+
+                class Meta:
+                    db_table_comment = "Question answers"
+
+    ********
+
+** Options.default_manager_name
+
+    The name of the manager to use for the model’s _default_manager.
+
+** Options.default_related_name
+
+    The default_related_name attribute in the Django Meta class allows you to specify the default name for 
+    reverse relationships when creating relationships between models. It simplifies accessing related objects 
+    from the reverse side of the relationship.
+
+    1** One-to-One Relationship
+
+    ********
+
+            class UserProfile(models.Model):
+                user = models.OneToOneField(User, on_delete=models.CASCADE)
+
+                class Meta:
+                    default_related_name = 'profile'
+
+    ********  You can access the 'UserProfile' object associated with a 'User' instance as 'user.profile'
+
+    2** Foreign Key RelationShip
+
+    ********
+
+            class Comment(models.Model):
+                post = models.ForeignKey(Post, on_delete=models.CASCADE)
+
+                class Meta:
+                    default_related_name = 'comments'
+    
+    ******** You can access all the comments associated with a Post instance as 'post.comments.all()'
+
+    3** Many-to-Many Relationship
+
+    ********
+
+            class Article(models.Model):
+                authors = models.ManyToManyField(Author)
+
+                class Meta:
+                    default_related_name = 'articles'
+
+    ******** You can access all the articles associated with an Author instance as 'author.articles.all()'
+
+    ** Related Names For Abstract models
+
+    If you are using related_name or related_query_name on a ForeignKey or ManyToManyField, you must always 
+    specify a unique reverse name and query name for the field. This would normally cause a problem in abstract 
+    base classes, since the fields on this class are included into each of the child classes, with exactly the 
+    same values for the attributes (including related_name and related_query_name) each time.
+
+    To work around this problem, when you are using related_name or related_query_name in an abstract base 
+    class (only), part of the value should contain '%(app_label)s' and '%(class)s'.
+
+        *** '%(class)s' is replaced by the lowercased name of the child class that the field is used in.
+        *** '%(app_label)s' is replaced by the lowercased name of the app the child class is contained within. 
+        Each installed application name must be unique and the model class names within each app must also be 
+        unique, therefore the resulting name will end up being different.
+
+        ********
+
+                from django.db import models
+
+
+                class Base(models.Model):
+                    m2m = models.ManyToManyField(
+                        OtherModel,
+                        related_name="%(app_label)s_%(class)s_related",
+                        related_query_name="%(app_label)s_%(class)ss",
+                    )
+
+                    class Meta:
+                        abstract = True
+
+        ********
+
+** Options.get_lates_by
+
+    The name of a field or a list of field names in the model, typically DateField, DateTimeField, or 
+    IntegerField. This specifies the default field(s) to use in your model Manager’s latest() and earliest() 
+    methods.
+    The latest() method in Django's querysets allows you to retrieve the latest object based on a specified 
+    field. The get_latest_by attribute in the model's Meta class is used to define the field to be used for 
+    retrieving the latest object.
+
+    ********
+
+            class Post(models.Model):
+                title = models.CharField(max_length=100)
+                pub_date = models.DateTimeField()
+                
+                class Meta:
+                    get_latest_by = 'pub_date'
+            
+            latest_post = Post.objects.latest()
+
+    ********
+
+** Options.managed
+
+    Defaults to True, meaning Django will create the appropriate database tables in 
+    migrate or as part of migrations and remove them as part of a flush management 
+    command. That is, Django manages the database tables’ lifecycles.
+
+    If False, no database table creation, modification, or deletion operations will be 
+    performed for this model. This is useful if the model represents an existing table or 
+    a database view that has been created by some other means. This is the only difference 
+    when managed=False. All other aspects of model handling are exactly the same as normal.
+    This includes
+
+    Adding an automatic primary key field to the model if you don’t declare it. To avoid 
+    confusion for later code readers, it’s recommended to specify all the columns from 
+    the database table you are modeling when using unmanaged models.
+
+    If a model with managed=False contains a ManyToManyField that points to another 
+    unmanaged model, then the intermediate table for the many-to-many join will also 
+    not be created. However, the intermediary table between one managed and one unmanaged 
+    model will be created.
+
+    If you need to change this default behavior, create the intermediary table as an 
+    explicit model (with managed set as needed) and use the ManyToManyField.through 
+    attribute to make the relation use your custom model.
+
+    For tests involving models with managed=False, it’s up to you to ensure the correct 
+    tables are created as part of the test setup.
+
+    If you’re interested in changing the Python-level behavior of a model class, you 
+    could use managed=False and create a copy of an existing model. However, there’s a 
+    better approach for that situation: Proxy models.
+
+** Options.order-with-respect_to
+
+    Makes this object orderable with respect to the given field, usually a ForeignKey. 
+    This can be used to make related objects orderable with respect to a parent object. 
+    For example, if an Answer relates to a Question object, and a question has more than 
+    one answer, and the order of answers matters, you’d do this:
+
+    ********
+
+            from django.db import models
+
+
+            class Question(models.Model):
+                text = models.TextField()
+                # ...
+
+
+            class Answer(models.Model):
+                question = models.ForeignKey(Question, on_delete=models.CASCADE)
+                # ...
+
+                class Meta:
+                    order_with_respect_to = "question"
+    
+    ********
+
+    When order_with_respect_to is set, two additional methods are provided to retrieve 
+    and to set the order of the related objects: get_RELATED_order() and set_RELATED_order()
+    , where RELATED is the lowercased model name. For example, assuming that a Question 
+    object has multiple related Answer objects, the list returned contains the primary 
+    keys of the related Answer objects:
+
+    ********
+
+            >>> question = Question.objects.get(id=1)
+            >>> question.get_answer_order()
+            [1, 2, 3]
+    
+    ********
+
+    The order of a Question object’s related Answer objects can be set by passing in a 
+    list of Answer primary keys:
+
+    >>> question.set_answer_order([3, 1, 2])
+    
+    The related objects also get two methods, get_next_in_order() and get_previous_in_order
+    (), which can be used to access those objects in their proper order. Assuming the 
+    Answer objects are ordered by id:
+
+    >>> answer = Answer.objects.get(id=2)
+    >>> answer.get_next_in_order()
+    <Answer: 3>
+    >>> answer.get_previous_in_order()
+    <Answer: 1>
+
+** Options.ordering
+
+    The default ordering for the object, for use when obtaining lists of objects:
+
+        ordering = ["-order_date"]
+    
+    This is a tuple or list of strings and/or query expressions. Each string is a field 
+    name with an optional “-” prefix, which indicates descending order. Fields without a 
+    leading “-” will be ordered ascending. Use the string “?” to order randomly.
+
+    You can also use query expressions. To order by author ascending and make null values sort last, use this:
+
+        from django.db.models import F
+
+        ordering = [F("author").asc(nulls_last=True)]
+
+** Options.permissions
+
+    Extra permissions to enter into the permissions table when creating this object. 
+    Add, change, delete, and view permissions are automatically created for each model. 
+    This example specifies an extra permission, can_deliver_pizzas:
+
+        permissions = [("can_deliver_pizzas", "Can deliver pizzas")]
+    
+    This is a list or tuple of 2-tuples in the format (permission_code, 
+    human_readable_permission_name).
+
+** Options.default_permission
+
+    Defaults to ('add', 'change', 'delete', 'view'). You may customize this list, for 
+    example, by setting this to an empty list if your app doesn’t require any of the 
+    default permissions. It must be specified on the model before the model is created 
+    by migrate in order to prevent any omitted permissions from being created.
+
+** Options.Proxy
+    
+    If proxy = True, a model which subclasses another model will be treated as a proxy model.
+
+
+** Options.required_db_features
+
+    List of database features that the current connection should have so that the model is considered during 
+    the migration phase. For example, if you set this list to ['gis_enabled'], the model will only be 
+    synchronized on GIS-enabled databases. It’s also useful to skip some models when testing with several 
+    database backends. Avoid relations between models that may or may not be created as the ORM doesn’t
+    handle this.
+    
+
+** Options.required_db_vendor
+
+    Name of a supported database vendor that this model is specific to. Current built-in vendor names are: 
+    sqlite, postgresql, mysql, oracle. If this attribute is not empty and the current connection vendor 
+    doesn’t match it, the model will not be synchronized.
+
+** Options.indexes
+
+    A list of indexes that you want to define on the model:
+
+    ********
+
+            from django.db import models
+
+
+            class Customer(models.Model):
+                first_name = models.CharField(max_length=100)
+                last_name = models.CharField(max_length=100)
+
+                class Meta:
+                    indexes = [
+                        models.Index(fields=["last_name", "first_name"]),
+                        models.Index(fields=["first_name"], name="first_name_idx"),
+                    ]
+    ********
+
+** Options.unique_together
+
+    Sets of field names that, taken together, must be unique:
+
+        unique_together = [["driver", "restaurant"]]
+
+    This is a list of lists that must be unique when considered together. It’s used in the Django admin and 
+    is enforced at the database level (i.e., the appropriate UNIQUE statements are included in the CREATE TABLE 
+    statement).
+
+    For convenience, unique_together can be a single list when dealing with a single set of fields:
+
+        unique_together = ["driver", "restaurant"]
+    
+    A ManyToManyField cannot be included in unique_together. (It’s not clear what that would even mean!) If you 
+    need to validate uniqueness related to a ManyToManyField, try using a signal or an explicit through model.
+
+    ********
+
+            from django.db import models
+
+            class Book(models.Model):
+                title = models.CharField(max_length=100)
+                authors = models.ManyToManyField('Author', through='BookAuthor')
+
+            class Author(models.Model):
+                name = models.CharField(max_length=100)
+
+            class BookAuthor(models.Model):
+                book = models.ForeignKey(Book, on_delete=models.CASCADE)
+                author = models.ForeignKey(Author, on_delete=models.CASCADE)
+
+                class Meta:
+                    constraints = [
+                        models.UniqueConstraint(fields=['book', 'author'], name='unique_book_author')
+                    ]
+
+    ********
+
+    The ValidationError raised during model validation when the constraint is violated has the unique_together 
+    error code.
+
+    ********
+
+            from django.db import models
+
+            class Product(models.Model):
+                name = models.CharField(max_length=100)
+                sku = models.CharField(max_length=20)
+                category = models.CharField(max_length=50)
+
+                class Meta:
+                    constraints = [
+                        models.UniqueConstraint(fields=['sku'], name='unique_sku'),
+                        models.UniqueConstraint(fields=['name', 'category'], name='unique_name_category')
+                    ]
+
+    ********
+
+** Options.index_together
+
+
+    Sets of field names that, taken together, are indexed:
+
+        index_together = [
+            ["pub_date", "deadline"],
+        ]
+    This list of fields will be indexed together (i.e. the appropriate CREATE INDEX statement will be issued.)
+
+    For convenience, index_together can be a single list when dealing with a single set of fields:
+
+    index_together = ["pub_date", "deadline"]
+
+    Improved Query Performance: Indexes allow the database to quickly locate the relevant data without having to scan the entire table. They act like a roadmap or an index of a book, enabling the database to jump directly to the specific data pages or rows that match the query conditions. This significantly speeds up query execution, especially for large tables or complex queries.
+
+        ** Faster Data Retrieval: By using indexes, the database can avoid performing full table scans and 
+        instead perform index scans or index seeks. This means that even if the table contains millions of 
+        rows, the database can quickly narrow down the search to a subset of rows that match the indexed 
+        columns, resulting in faster data retrieval.
+
+        ** Support for Constraints: Indexes can also be used to enforce constraints on the data, such as 
+        uniqueness or primary key constraints. These constraints help maintain data integrity and prevent 
+        duplicate or inconsistent data from being inserted or updated in the table.
+
+        ** Query Optimization: The database query optimizer uses indexes to determine the most efficient 
+        query execution plan. It analyzes the available indexes and selects the optimal index or combination 
+        of indexes to use based on the query predicates and join conditions. This ensures that the database 
+        executes the query in the most efficient manner, minimizing the time and resources required.
+
+        ** Trade-Offs: While indexes offer performance benefits, they also come with some trade-offs. Indexes 
+        consume additional storage space, as they store a copy of the indexed columns' values in a separate 
+        data structure. Moreover, indexes need to be maintained when the underlying data is modified, which 
+        incurs some overhead during data insertion, update, and deletion operations. Therefore, it's essential 
+        to carefully consider the columns to index, balancing the performance benefits against the storage and 
+        maintenance costs.
+
+** Options.constraints
+
+        A list of constraints that you want to define on the model:
+
+        from django.db import models
+
+
+        class Customer(models.Model):
+            age = models.IntegerField()
+
+            class Meta:
+                constraints = [
+                    models.CheckConstraint(check=models.Q(age__gte=18), name="age_gte_18"),
+                ]
+
+
+** Options.verbose_name
+    
+    A human-readable name for the object, singular:
+
+        verbose_name = "pizza"
+    
+    If this isn’t given, Django will use a munged version of the class name: CamelCase becomes camel case.
+
+
+** Options.verbose_name_plural
+    
+    The plural name for the object:
+
+        verbose_name_plural = "stories"
+    
+    If this isn’t given, Django will use verbose_name + "s".
